@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Termo?</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+    body {
+      font-family: 'Fredoka One', cursive;
+      background: #6a5a61;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .tile {
+      border-radius: 8px;
+      border-width: 3px;
+      border-style: solid;
+      border-color: #b3aeb3;
+      background: #5a4a51;
+      color: white;
+      font-size: 2rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 3rem;
+      height: 3rem;
+      margin: 0.15rem;
+      transition: background 0.2s, border-color 0.2s;
+      user-select: none;
+    }
+    @media (min-width: 640px) {
+      .tile {
+        width: 3.5rem;
+        height: 3.5rem;
+        font-size: 2.2rem;
+      }
+    }
+    .tile.correct {
+      background: #538d4e;
+      border-color: #538d4e;
+      color: white;
+    }
+    .tile.present {
+      background: #b59f3b;
+      border-color: #b59f3b;
+      color: white;
+    }
+    .tile.absent {
+      background: #3a3a3c;
+      border-color: #3a3a3c;
+      color: white;
+    }
+    @keyframes flipY {
+      0%   { transform: rotateY(0deg); }
+      50%  { transform: rotateY(90deg); }
+      100% { transform: rotateY(0deg); }
+    }
+    .tile.flip {
+      animation: flipY 0.28s cubic-bezier(.77,0,.18,1) forwards;
+      transform-origin: center center;
+      backface-visibility: hidden;
+    }
+    .keyboard-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.3rem;
+      margin-bottom: 0.3rem;
+    }
+    .key-btn {
+      background: #3f3a3f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      height: 2.6rem;
+      min-width: 2.2rem;
+      padding: 0 0.6rem;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .key-btn.wide {
+      min-width: 3.5rem;
+      font-size: 1.1rem;
+    }
+    .key-btn:active {
+      background: #5a4a51;
+    }
+    @media (max-width: 400px) {
+      .tile { width: 2.2rem; height: 2.2rem; font-size: 1.3rem; }
+      .key-btn { height: 2rem; min-width: 1.5rem; font-size: 0.9rem; }
+      .key-btn.wide { min-width: 2.2rem; }
+    }
+    /* Animação do presente */
+    @keyframes gift-bounce {
+      0%, 100% { transform: translateY(0) rotate(-8deg);}
+      50% { transform: translateY(-20px) rotate(8deg);}
+    }
+    .animate-gift-bounce {
+      font-size: 6rem;
+      animation: gift-bounce 1.2s infinite;
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
+    .animate-gift-bounce:hover {
+      filter: brightness(1.3) drop-shadow(0 0 10px #ffd700);
+    }
+    /* Confete */
+    .confetti {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      width: 10px;
+      height: 20px;
+      opacity: 0.8;
+      border-radius: 3px;
+      pointer-events: none;
+      z-index: 99999;
+      animation: confetti-fall 2s linear forwards;
+    }
+    @keyframes confetti-fall {
+      to {
+        transform: translateY(100vh) rotateZ(360deg);
+        opacity: 0.7;
+      }
+    }
+    @keyframes emoji-pulse {
+      0%, 100% { transform: scale(1);}
+      50% { transform: scale(1.2);}
+    }
+    .emoji-pulse {
+      display: inline-block;
+      animation: emoji-pulse 1s infinite;
+    }
+    @keyframes modal-pop {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .love-modal-animate {
+      animation: modal-pop 0.5s cubic-bezier(.68,-0.55,.27,1.55);
+    }
+    .love-img-animate {
+      transition: box-shadow 0.3s, border 0.3s;
+      border: 3px solid #b3aeb3;
+    }
+    .love-img-animate:hover {
+      box-shadow: 0 0 20px #ffd70088, 0 0 10px #ff69b488;
+      border-color: #ffd700;
+    }
+    /* Footer Spotify */
+    #musicFooter {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 100vw;
+      z-index: 999999;
+      background: #232323;
+      color: #fff;
+      display: none;
+      align-items: center;
+      padding: 0.75rem 1.25rem;
+      box-shadow: 0 -2px 16px #0008;
+      transition: transform 0.5s cubic-bezier(.68,-0.55,.27,1.55);
+      transform: translateY(100%);
+      font-size: 1rem;
+    }
+    #musicFooter.show {
+      display: flex;
+      transform: translateY(0);
+    }
+    #musicTitle {
+      font-weight: bold;
+      font-size: 1rem;
+      margin-bottom: 0.2rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #musicProgress {
+      background: #1db954; /* Verde Spotify */
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.2s;
+    }
+    .footer-bar {
+      width: 100%;
+      height: 8px;
+      background: #444;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 0 0.5rem;
+      position: relative;
+    }
+    @media (max-width: 600px) {
+      #musicFooter {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 0.5rem 0.5rem;
+        font-size: 0.95rem;
+      }
+      #musicTitle {
+        font-size: 0.95rem;
+        margin-bottom: 0.1rem;
+      }
+      .footer-bar {
+        height: 6px;
+        margin: 0 0.3rem;
+      }
+      .flex-1 {
+        width: 100%;
+      }
+    }
+    @media (max-width: 400px) {
+      #musicFooter {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.2rem;
+      }
+      #musicTitle {
+        font-size: 0.85rem;
+      }
+    }
+    .custom-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: #b3aeb3 #5a4a51;
+      padding-right: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 10px;
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #b3aeb3;
+      border-radius: 16px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #5a4a51;
+      border-radius: 16px;
+    }
+  </style>
+</head>
+<body>
+  <header class="w-full max-w-md flex justify-between items-center mb-4 mt-2 px-2">
+    <div class="flex space-x-2">
+      <button class="w-8 h-8 border border-[#b3aeb3] text-[#b3aeb3] rounded flex items-center justify-center">↑</button>
+      <button class="w-8 h-8 border border-[#b3aeb3] text-[#b3aeb3] rounded">?</button>
+    </div>
+    <h1 class="text-white text-2xl md:text-4xl select-none font-bold tracking-wide">TERMO</h1>
+    <div class="flex space-x-2">
+      <button class="w-8 h-8 border border-[#b3aeb3] text-[#b3aeb3] rounded">📊</button>
+      <button class="w-8 h-8 border border-[#b3aeb3] text-[#b3aeb3] rounded">⚙️</button>
+    </div>
+  </header>
+
+  <main class="w-full flex flex-col items-center space-y-2 mb-6">
+    <div id="board" class="flex flex-col items-center"></div>
+  </main>
+
+  <section class="w-full flex flex-col items-center">
+    <div id="keyboard"></div>
+  </section>
+
+  <!-- Modal de fim de jogo -->
+  <div id="loseModal" style="display:none;"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+    <div class="bg-[#5a4a51] rounded-xl shadow-lg p-8 flex flex-col items-center max-w-xs w-full">
+      <h2 class="text-white text-xl font-bold mb-2">Fim de jogo!</h2>
+      <p class="text-[#b3aeb3] mb-4 text-center">
+        Poxa, que pena 😢<br>
+        Mas saiba que você sempre pode tentar de novo!
+      </p>
+      <button id="resetBtn" class="text-3xl mb-2 hover:scale-110 transition-transform" title="Tentar de novo">🔄</button>
+      <span class="text-[#b3aeb3] text-sm">Tentar novamente?</span>
+    </div>
+  </div>
+
+  <!-- Presente animado -->
+  <div id="giftBox" style="display:none;"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+    <div class="flex flex-col items-center">
+      <button id="openGiftBtn" class="focus:outline-none animate-gift-bounce">
+        🎁
+      </button>
+      <span class="text-white mt-2 font-bold text-2xl emoji-pulse">Clique no presente!</span>
+    </div>
+  </div>
+
+  <!-- Modal de fotos e texto -->
+  <div id="loveModal" style="display:none;"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+    <div class="bg-[#5a4a51] rounded-xl shadow-lg p-6 flex flex-col items-center max-w-sm w-full relative">
+      <button id="closeLoveModal" class="absolute top-2 right-3 text-white text-2xl">&times;</button>
+      <button id="muteLoveBtn" class="absolute top-2 left-3 text-white text-2xl" title="Mutar música">🔊</button>
+      <div class="w-full flex flex-col items-center max-h-[70vh]" id="loveModalContent"></div>
+      <button id="nextLoveModal" class="mt-4 bg-[#b3aeb3] text-[#5a4a51] px-4 py-2 rounded font-bold">Próximo</button>
+    </div>
+  </div>
+
+  <!-- Footer estilo Spotify -->
+  <div id="musicFooter">
+    <div class="flex-1 w-full">
+      <div id="musicTitle" class="font-bold text-base"></div>
+      <div class="flex items-center gap-2 w-full">
+        <span id="musicCurrent" class="text-xs">0:00</span>
+        <div class="relative w-full h-2 bg-[#444] rounded overflow-hidden footer-bar">
+          <div id="musicProgress" class="absolute top-0 left-0 h-2 transition-all"></div>
+        </div>
+        <span id="musicDuration" class="text-xs">0:00</span>
+      </div>
+    </div>
+  </div>
+
+  <audio id="trumpetSound" src="src/trompete.mp3"></audio>
+  <audio id="loveSound" src="src/amor.mp3" loop></audio>
+
+  <script>
+    const solution = 'KAROL';
+    let currentRow = 0;
+    let currentTile = 0;
+    const maxRows = 6;
+    const boardState = Array.from({ length: maxRows }, () => []);
+
+    // Monta o board em linhas
+    const board = document.getElementById('board');
+    for (let r = 0; r < maxRows; r++) {
+      const row = document.createElement('div');
+      row.className = 'flex';
+      for (let c = 0; c < 5; c++) {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        row.appendChild(tile);
+      }
+      board.appendChild(row);
+    }
+
+    // Teclado virtual em 3 linhas
+    const keyboard = document.getElementById('keyboard');
+    const keyRows = [
+      [...'QWERTYUIOP'],
+      [...'ASDFGHJKL'],
+      ['ENTER', ...'ZXCVBNM', '⌫']
+    ];
+    keyRows.forEach(row => {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'keyboard-row';
+      row.forEach(key => {
+        const btn = document.createElement('button');
+        if (key === '⌫') {
+          btn.innerHTML = '<i class="fa-solid fa-delete-left"></i>';
+        } else {
+          btn.textContent = key;
+        }
+        btn.className = 'key-btn' + (key === 'ENTER' || key === '⌫' ? ' wide' : '');
+        btn.onclick = () => handleVirtualKey(key);
+        rowDiv.appendChild(btn);
+      });
+      keyboard.appendChild(rowDiv);
+    });
+
+    function handleVirtualKey(key) {
+      if (key === 'ENTER') {
+        if (boardState[currentRow].length === 5) checkWord();
+      } else if (key === '⌫') {
+        if (currentTile > 0) {
+          currentTile--;
+          boardState[currentRow][currentTile] = '';
+          updateBoard();
+        }
+      } else {
+        handleKeyPress(key);
+      }
+    }
+
+    function handleKeyPress(key) {
+      if (currentTile < 5 && currentRow < maxRows) {
+        boardState[currentRow][currentTile] = key;
+        updateBoard();
+        currentTile++;
+      }
+    }
+
+    function updateBoard() {
+      const rowDiv = board.children[currentRow];
+      for (let i = 0; i < 5; i++) {
+        rowDiv.children[i].textContent = boardState[currentRow][i] || '';
+      }
+    }
+
+    function checkWord() {
+      const guess = boardState[currentRow].join('').toUpperCase();
+      const rowDiv = board.children[currentRow];
+      const solutionArr = solution.split('');
+      const guessArr = guess.split('');
+
+      const flipInterval = 300; // 300ms entre cada flip
+      const flipDuration = 280; // 0.28s em ms
+
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          const tile = rowDiv.children[i];
+          tile.classList.remove('correct', 'present', 'absent', 'flip');
+          tile.classList.add('flip');
+
+          setTimeout(() => {
+            tile.classList.remove('flip');
+            if (guessArr[i] === solutionArr[i]) {
+              tile.classList.add('correct');
+            } else if (solutionArr.includes(guessArr[i])) {
+              tile.classList.add('present');
+            } else {
+              tile.classList.add('absent');
+            }
+          }, flipDuration);
+        }, i * flipInterval);
+      }
+
+      const totalFlipTime = (flipInterval * (5 - 1)) + flipDuration;
+
+      setTimeout(() => {
+        if (guess === solution) {
+          playTrumpet();
+          document.getElementById('giftBox').style.display = 'flex';
+          launchConfetti(); // Confetti ao ganhar
+        } else {
+          currentRow++;
+          currentTile = 0;
+          if (currentRow === maxRows) {
+            document.getElementById('loseModal').style.display = 'flex';
+          }
+        }
+      }, totalFlipTime);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        if (boardState[currentRow].length === 5) {
+          checkWord();
+        }
+      } else if (e.key === 'Backspace') {
+        if (currentTile > 0) {
+          currentTile--;
+          boardState[currentRow][currentTile] = '';
+          updateBoard();
+        }
+      } else if (/^[a-zA-Z]$/.test(e.key)) {
+        handleKeyPress(e.key.toUpperCase());
+      }
+    });
+
+    // Reinicia o jogo
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      currentRow = 0;
+      currentTile = 0;
+      // Limpa o estado do board
+      for (let r = 0; r < maxRows; r++) {
+        boardState[r] = [];
+        const rowDiv = board.children[r];
+        for (let c = 0; c < 5; c++) {
+          rowDiv.children[c].textContent = '';
+          rowDiv.children[c].classList.remove('correct', 'present', 'absent', 'flip');
+        }
+      }
+      document.getElementById('loseModal').style.display = 'none';
+    });
+
+    // --- Músicas do modal do amor ---
+    const loveSongs = [
+      { src: 'src/1.mp3', title: 'Joji - My Love All Mine' },
+      { src: 'src/2.mp3', title: 'Aliança - Tribalistas' },
+      { src: 'src/3.mp3', title: 'Stephen Sanchez - Until I Found You feat. Em Beihold' },
+      { src: 'src/4.mp3', title: 'Scorpions - Still Loving You' },
+      { src: 'src/5.mp3', title: 'The Police - Every Breath You Take' },
+      { src: 'src/6.mp3', title: 'Feliz Aniversário, meu amor!' }
+    ];
+    let currentSongIdx = 0;
+    let loveSongAudio = null;
+
+    function playLoveSong(idx) {
+      // Para e remove o anterior
+      if (loveSongAudio) {
+        loveSongAudio.pause();
+        loveSongAudio.currentTime = 0;
+        loveSongAudio.remove();
+      }
+      currentSongIdx = idx;
+      if (!loveSongs[idx]) {
+        stopLoveSong();
+        return;
+      }
+      loveSongAudio = new Audio(loveSongs[idx].src);
+      loveSongAudio.play();
+
+      // Atualiza footer
+      const footer = document.getElementById('musicFooter');
+      const title = document.getElementById('musicTitle');
+      const current = document.getElementById('musicCurrent');
+      const duration = document.getElementById('musicDuration');
+      const progress = document.getElementById('musicProgress');
+
+      title.textContent = loveSongs[idx].title;
+      current.textContent = '0:00';
+      duration.textContent = '0:00';
+      progress.style.width = '0%';
+
+      // Mostra footer com animação
+      footer.classList.add('show');
+
+      loveSongAudio.addEventListener('loadedmetadata', () => {
+        duration.textContent = formatTime(loveSongAudio.duration);
+      });
+
+      loveSongAudio.addEventListener('timeupdate', () => {
+        current.textContent = formatTime(loveSongAudio.currentTime);
+        if (loveSongAudio.duration) {
+          progress.style.width = ((loveSongAudio.currentTime / loveSongAudio.duration) * 100) + '%';
+        }
+      });
+
+      loveSongAudio.addEventListener('ended', () => {
+        footer.classList.remove('show');
+        setTimeout(() => { footer.style.display = 'none'; }, 500);
+      });
+
+      footer.style.display = 'flex';
+    }
+
+    function stopLoveSong() {
+      if (loveSongAudio) {
+        loveSongAudio.pause();
+        loveSongAudio.currentTime = 0;
+        loveSongAudio.remove();
+        loveSongAudio = null;
+      }
+      const footer = document.getElementById('musicFooter');
+      footer.classList.remove('show');
+      setTimeout(() => { footer.style.display = 'none'; }, 500);
+    }
+
+    function formatTime(sec) {
+      sec = Math.floor(sec);
+      return `${Math.floor(sec/60)}:${('0'+(sec%60)).slice(-2)}`;
+    }
+
+    // Fotos e textos para o modal (adicione suas imagens e textos aqui)
+    const loveSlides = [
+      {
+        img: '', // Sem foto no primeiro modal
+        title: 'Feliz aniversário, meu amor!',
+        text: `
+          <span class="emoji-pulse" style="font-size:2em;display:block;margin-bottom:0.5em;">💖</span>
+          Para os seus 23 aninhos, quero te dizer algumas coisas…
+        `
+      },
+      {
+        img: '1.png',
+        text: `
+          Eu costumo sempre dizer em todos os seus aniversários a mesma coisa: <span style="color:#b59f3b;font-weight:bold;">hoje é o seu dia</span>, mas é você quem é (e sempre foi, e sempre será) o meu maior presente. E não paro de dizer, pois nunca deixou de ser verdade o tanto que você agrega em minha vida. Te conhecer é te amar cada vez mais, e estar do seu ladinho no dia de hoje é minha maior felicidade, como é a felicidade de estar à sua companhia todos os <span style="color:#b59f3b;font-weight:bold;">dias</span>.
+        `
+      },
+      {
+        img: '2.png',
+        text: `
+          Você consegue melhorar tudo, você traz leveza por onde passa, me ajuda tanto com redação, quanto a quando está sempre ao meu lado quando estou triste.<br><br>
+          E, se me perguntassem "Quem é Karol?" eu não conseguiria definir em uma só frase. Karol é uma amiga confiável, uma namorada carinhosa, uma mulherona incrível, inteligente, maravilhosa e muito, mas muito gata.<br><br>
+          Pra mim, você é <span style="color:#ff69b4;font-weight:bold;">meu tudinho</span>!
+        `
+      },
+      {
+        img: '3.png',
+        text: `
+          Você não é só a <span style="color:#b59f3b;font-weight:bold;">palavra do dia</span> — você é a pessoa que ilumina todos os <span style="color:#b59f3b;font-weight:bold;">dias</span>, que alegra a vida de quem está ao seu redor com sua felicidade e seu jeitinho único de ser, e é o jeitinho que me encanta e que me faz crescer cada dia mais a enorme admiração que eu tenho por você, <span style="color:#ff69b4;font-weight:bold;">meu amor</span>.
+        `
+      },
+      {
+        img: '4.png',
+        text: `
+          Admiro cada detalhe seu: o jeito como se olha no espelho quando está se arrumando, como não abre mão do seu limãozinho espremido todas as manhãs, sua mania de sempre levar um papelzinho, de dormir no meu peitinho quase que instantaneamente… Mas, acima de tudo, admiro a facilidade como você me faz sentir em casa e amado sempre que estou com você. E por isso que, em todos os <span style="color:#b59f3b;font-weight:bold;">dias</span> da minha vida, sou eternamente comprometido em te presentear com esse mesmo sentimento de carinho, amor, respeito e afeto 💕
+        `
+      },
+      {
+        img: '6.png',
+        text: `
+          Chegando ao final desse terminho, só queria reforçar o tanto que você é especial para mim. Que cada novo ciclo seja ainda mais leve, feliz e cheio de conquistas e frutos. Que continuemos sempre construindo juntos memórias lindas, rindo das nossas loucuras e celebrando cada momento lado a lado.<br><br>
+          Obrigado por ser quem você é e por me permitir fazer parte da sua linda vida, e que seu novo ano seja repleto de amor, saúde, realizações e muitos motivos para sorrir ainda mais. Você merece o mundo, minha vida! 💖
+        `
+      },
+      {
+        img: '5.png',
+        text: `
+          E só mais uma coisa a dizer:<br>
+          Eu te amo. Feliz aniversário, meu amor! <span class="emoji-pulse">❤️</span>
+        `
+      }
+    ];
+
+    let loveIndex = 0;
+
+    function showLoveSlide(idx) {
+      const content = document.getElementById('loveModalContent');
+      content.innerHTML = '';
+      content.classList.remove('love-modal-animate', 'custom-scroll');
+      setTimeout(() => content.classList.add('love-modal-animate'), 10);
+
+      // Adicione a classe de scroll apenas se não for o primeiro slide
+      if (idx !== 0) {
+        content.classList.add('custom-scroll');
+        content.style.overflowY = 'auto';
+      } else {
+        content.classList.remove('custom-scroll');
+        content.style.overflowY = '';
+      }
+
+      // Título com dois confetes pulsantes nas laterais (apenas no primeiro modal)
+      if (loveSlides[idx].title) {
+        const h2 = document.createElement('h2');
+        h2.className = 'text-white text-3xl font-extrabold mb-2 text-center flex items-center justify-center gap-2';
+        if (idx === 0) {
+          h2.innerHTML = '<span class="emoji-pulse" style="font-size:2em;">🎉</span> ' +
+            loveSlides[idx].title +
+            ' <span class="emoji-pulse" style="font-size:2em;">🎉</span>';
+        } else {
+          h2.innerText = loveSlides[idx].title;
+        }
+        content.appendChild(h2);
+      }
+
+      // Imagem, se houver
+      if (loveSlides[idx].img) {
+        const img = document.createElement('img');
+        img.src = loveSlides[idx].img;
+        img.alt = 'Foto nossa';
+        img.className = 'rounded-lg mb-4 max-h-60 shadow love-img-animate';
+        content.appendChild(img);
+      }
+
+      // Texto do slide
+      const p = document.createElement('p');
+      p.className = 'text-white text-center text-xl whitespace-pre-line';
+      p.innerHTML = loveSlides[idx].text;
+      content.appendChild(p);
+
+      // Música e footer Spotify só a partir do segundo slide
+      if (loveSongs[idx - 1]) {
+        playLoveSong(idx - 1);
+      } else {
+        stopLoveSong();
+      }
+
+      // Se for o último slide, mostra o presente animado e mensagem
+      const nextBtn = document.getElementById('nextLoveModal');
+      if (idx === loveSlides.length - 1) {
+        nextBtn.style.display = 'none';
+        launchConfetti();
+
+        // Presente animado GRANDE
+        const giftBtn = document.createElement('button');
+        giftBtn.className = 'animate-gift-bounce mt-6';
+        giftBtn.innerText = '🎁';
+        giftBtn.title = 'Clique para receber seu presente!';
+        giftBtn.style.fontSize = '6rem';
+        giftBtn.onclick = function() {
+          stopTrumpet();
+          stopLoveSong();
+          document.getElementById('loveModal').style.display = 'none';
+        };
+        content.appendChild(giftBtn);
+
+        // Mensagem especial
+        const msg = document.createElement('div');
+        msg.className = 'text-[#b3aeb3] text-center mt-4 text-lg font-bold';
+        msg.innerHTML = 'Espero que goste, foi com amor! <span style="font-size:1.5em;">💝</span>';
+        content.appendChild(msg);
+      } else {
+        nextBtn.style.display = '';
+      }
+    }
+
+    document.getElementById('openGiftBtn').onclick = function() {
+      stopTrumpet();         // Para o trompete imediatamente
+      stopLoveSong();
+      document.getElementById('giftBox').style.display = 'none';
+      document.getElementById('loveModal').style.display = 'flex';
+      loveIndex = 0;
+      showLoveSlide(loveIndex);
+    };
+
+    document.getElementById('nextLoveModal').onclick = function() {
+      loveIndex++;
+      if (loveIndex < loveSlides.length) {
+        showLoveSlide(loveIndex);
+      } else {
+        document.getElementById('loveModal').style.display = 'none';
+        stopLoveSong();
+      }
+    };
+
+    document.getElementById('closeLoveModal').onclick = function() {
+      document.getElementById('loveModal').style.display = 'none';
+      stopLoveSong();
+    };
+
+    const muteBtn = document.getElementById('muteLoveBtn');
+    const loveAudio = document.getElementById('loveSound');
+    let isMuted = false;
+
+    muteBtn.onclick = function() {
+      isMuted = !isMuted;
+      loveAudio.muted = isMuted;
+      muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    };
+
+    function launchConfetti() {
+      const colors = ['#FFD700', '#FF69B4', '#00CFFF', '#FF6347', '#7CFC00', '#b59f3b', '#538d4e'];
+      for (let i = 0; i < 60; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        // 50% chance de cair pela esquerda ou direita
+        if (Math.random() < 0.5) {
+          // Esquerda: entre 2vw e 15vw
+          confetti.style.left = (2 + Math.random() * 13) + 'vw';
+        } else {
+          // Direita: entre 85vw e 98vw
+          confetti.style.left = (85 + Math.random() * 13) + 'vw';
+        }
+        confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+        confetti.style.animationDuration = (1.5 + Math.random()) + 's';
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 2200);
+      }
+    }
+
+    function playTrumpet() {
+      const trumpet = document.getElementById('trumpetSound');
+      trumpet.currentTime = 0;
+      trumpet.play();
+    }
+
+    function stopTrumpet() {
+      const trumpet = document.getElementById('trumpetSound');
+      trumpet.pause();
+      trumpet.currentTime = 0;
+    }
+
+    function playLove() {
+      const love = document.getElementById('loveSound');
+      love.currentTime = 0;
+      love.play();
+    }
+
+    function stopLove() {
+      const love = document.getElementById('loveSound');
+      love.pause();
+      love.currentTime = 0;
+    }
+  </script>
+</body>
+</html>
