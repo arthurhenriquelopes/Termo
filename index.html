@@ -11,7 +11,7 @@
     @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
     body {
       font-family: 'Fredoka One', cursive;
-      background: #6a5a61;
+      background: #6E5C62; /* cor corrigida */
       min-height: 100vh;
       margin: 0;
       padding: 0;
@@ -56,8 +56,21 @@
       color: white;
     }
     .tile.absent {
-      background: #3a3a3c;
-      border-color: #3a3a3c;
+      background: #312A2C;
+      border-color: #312A2C;
+      color: white;
+    }
+    .tile.inactive {
+      background: #615458 !important;
+      border-color: #615458 !important;
+    }
+    .tile.active {
+      background: transparent !important;
+      border-color: #4C4347 !important;
+    }
+    .tile.absent, .key-btn.absent {
+      background: #312A2C;
+      border-color: #312A2C;
       color: white;
     }
     @keyframes flipY {
@@ -329,6 +342,7 @@
     let currentTile = 0;
     const maxRows = 6;
     const boardState = Array.from({ length: maxRows }, () => []);
+    let isFlipping = false;
 
     // Monta o board em linhas
     const board = document.getElementById('board');
@@ -338,6 +352,12 @@
       for (let c = 0; c < 5; c++) {
         const tile = document.createElement('div');
         tile.className = 'tile';
+        // Aplique as classes iniciais:
+        if (r === 0) {
+          tile.classList.add('active');
+        } else {
+          tile.classList.add('inactive');
+        }
         row.appendChild(tile);
       }
       board.appendChild(row);
@@ -369,7 +389,7 @@
 
     function handleVirtualKey(key) {
       if (key === 'ENTER') {
-        if (boardState[currentRow].length === 5) checkWord();
+        if (currentTile === 5 && boardState[currentRow].join('').length === 5 && !isFlipping) checkWord();
       } else if (key === '⌫') {
         if (currentTile > 0) {
           currentTile--;
@@ -390,21 +410,71 @@
     }
 
     function updateBoard() {
-      const rowDiv = board.children[currentRow];
-      for (let i = 0; i < 5; i++) {
-        rowDiv.children[i].textContent = boardState[currentRow][i] || '';
+      for (let r = 0; r < maxRows; r++) {
+        const rowDiv = board.children[r];
+        for (let i = 0; i < 5; i++) {
+          rowDiv.children[i].textContent = boardState[r][i] || '';
+          rowDiv.children[i].classList.remove('active', 'inactive');
+          // Linha atual recebe .active, as próximas .inactive
+          if (r === currentRow) {
+            rowDiv.children[i].classList.add('active');
+          } else if (r > currentRow) {
+            rowDiv.children[i].classList.add('inactive');
+          }
+          // Linhas anteriores não recebem nenhuma das duas
+        }
       }
     }
 
     function checkWord() {
+      if (isFlipping) return;
+      isFlipping = true;
       const guess = boardState[currentRow].join('').toUpperCase();
       const rowDiv = board.children[currentRow];
       const solutionArr = solution.split('');
       const guessArr = guess.split('');
 
-      const flipInterval = 300; // 300ms entre cada flip
-      const flipDuration = 280; // 0.28s em ms
+      const flipInterval = 300;
+      const flipDuration = 280;
 
+      // 1. Calcule o status de cada letra ANTES do flip
+      const tileStatus = Array(5).fill('absent');
+      const solutionLetterCount = {};
+
+      // Conta as letras da solução
+      for (let l of solutionArr) {
+        solutionLetterCount[l] = (solutionLetterCount[l] || 0) + 1;
+      }
+
+      // Primeiro, marque os corretos
+      for (let i = 0; i < 5; i++) {
+        if (guessArr[i] === solutionArr[i]) {
+          tileStatus[i] = 'correct';
+          solutionLetterCount[guessArr[i]]--;
+        }
+      }
+      // Depois, marque os presents, mas só se ainda houver ocorrências restantes
+      for (let i = 0; i < 5; i++) {
+        if (
+          tileStatus[i] !== 'correct' &&
+          solutionLetterCount[guessArr[i]] > 0
+        ) {
+          tileStatus[i] = 'present';
+          solutionLetterCount[guessArr[i]]--;
+        }
+      }
+
+      // 1b. Calcule o melhor status de cada letra do palpite inteiro
+      const priority = { correct: 3, present: 2, absent: 1 };
+      const guessBestStatus = {};
+      for (let i = 0; i < 5; i++) {
+        const letter = guessArr[i].toUpperCase();
+        if (!guessBestStatus[letter] || priority[tileStatus[i]] > priority[guessBestStatus[letter]]) {
+          guessBestStatus[letter] = tileStatus[i];
+        }
+      }
+
+      // 2. Flip e aplica cor individualmente
       for (let i = 0; i < 5; i++) {
         setTimeout(() => {
           const tile = rowDiv.children[i];
@@ -413,39 +483,84 @@
 
           setTimeout(() => {
             tile.classList.remove('flip');
-            if (guessArr[i] === solutionArr[i]) {
-              tile.classList.add('correct');
-            } else if (solutionArr.includes(guessArr[i])) {
-              tile.classList.add('present');
-            } else {
-              tile.classList.add('absent');
+            tile.classList.remove('active');
+            tile.classList.add(tileStatus[i]);
+            // Não atualiza o teclado aqui!
+
+            // Após o último flip, atualiza o teclado com o melhor status do palpite inteiro
+            if (i === 4) {
+              setTimeout(() => {
+                // Atualiza o status global do teclado com o melhor status do palpite,
+                // mas nunca rebaixa o status já existente
+                Object.keys(guessBestStatus).forEach(letter => {
+                  if (solution.includes(letter)) {
+                    if (guessBestStatus[letter] === 'correct') {
+                      keyboardLetterStatus[letter] = 'correct';
+                    } else if (keyboardLetterStatus[letter] !== 'correct') {
+                      keyboardLetterStatus[letter] = 'present';
+                    }
+                  } else {
+                    if (!keyboardLetterStatus[letter]) {
+                      keyboardLetterStatus[letter] = 'absent';
+                    }
+                  }
+                });
+                // Garante que todas as letras da palavra do dia fiquem pelo menos amarelas no teclado
+                solution.split('').forEach(letter => {
+                  if (keyboardLetterStatus[letter] !== 'correct') {
+                    keyboardLetterStatus[letter] = 'present';
+                  }
+                });
+                updateKeyboardColors();
+                isFlipping = false;
+                if (guess !== solution) {
+                  currentRow++;
+                  currentTile = 0;
+                  for (let r = 0; r < maxRows; r++) {
+                    const rowDiv = board.children[r];
+                    for (let j = 0; j < 5; j++) {
+                      rowDiv.children[j].classList.remove('active', 'inactive');
+                      if (r === currentRow) {
+                        rowDiv.children[j].classList.add('active');
+                      } else if (r > currentRow) {
+                        rowDiv.children[j].classList.add('inactive');
+                      }
+                    }
+                  }
+                  if (currentRow === maxRows) {
+                    document.getElementById('loseModal').style.display = 'flex';
+                  }
+                } else {
+                  playTrumpet();
+                  document.getElementById('giftBox').style.display = 'flex';
+                  launchConfetti();
+                }
+              }, 10);
             }
           }, flipDuration);
         }, i * flipInterval);
       }
+    }
 
-      const totalFlipTime = (flipInterval * (5 - 1)) + flipDuration;
+    // Mapeia o melhor status já obtido para cada letra
+    const keyboardLetterStatus = {};
 
-      setTimeout(() => {
-        if (guess === solution) {
-          playTrumpet();
-          document.getElementById('giftBox').style.display = 'flex';
-          launchConfetti(); // Confetti ao ganhar
-        } else {
-          currentRow++;
-          currentTile = 0;
-          if (currentRow === maxRows) {
-            document.getElementById('loseModal').style.display = 'flex';
-          }
+    function updateKeyboardColors() {
+      const keyBtns = document.querySelectorAll('.key-btn');
+      keyBtns.forEach(btn => {
+        let key = btn.textContent.replace(/[^A-Z]/gi, '').toUpperCase();
+        if (key.length !== 1) return;
+        btn.classList.remove('correct', 'present', 'absent');
+        const status = keyboardLetterStatus[key];
+        if (status) {
+          btn.classList.add(status);
         }
-      }, totalFlipTime);
+      });
     }
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        if (boardState[currentRow].length === 5) {
-          checkWord();
-        }
+        if (currentTile === 5 && boardState[currentRow].join('').length === 5 && !isFlipping) checkWord();
       } else if (e.key === 'Backspace') {
         if (currentTile > 0) {
           currentTile--;
@@ -461,6 +576,7 @@
     document.getElementById('resetBtn').addEventListener('click', () => {
       currentRow = 0;
       currentTile = 0;
+      isFlipping = false;
       // Limpa o estado do board
       for (let r = 0; r < maxRows; r++) {
         boardState[r] = [];
@@ -468,8 +584,17 @@
         for (let c = 0; c < 5; c++) {
           rowDiv.children[c].textContent = '';
           rowDiv.children[c].classList.remove('correct', 'present', 'absent', 'flip');
+          rowDiv.children[c].classList.remove('active', 'inactive');
+          if (r === 0) {
+            rowDiv.children[c].classList.add('active');
+          } else {
+            rowDiv.children[c].classList.add('inactive');
+          }
         }
       }
+      // Limpa o teclado
+      Object.keys(keyboardLetterStatus).forEach(k => delete keyboardLetterStatus[k]);
+      updateKeyboardColors();
       document.getElementById('loseModal').style.display = 'none';
     });
 
